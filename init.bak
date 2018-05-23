@@ -1,0 +1,49 @@
+unit Init;
+
+interface
+
+uses Classes,sysutils,FPimage,FPImgCanv,FPReadPNG,ptc;
+
+Const nangluc1:Array[1..6] of Byte=(10,8,9,7,8,9);
+      nangluc2:Array[1..6] of Byte=(9,10,8,8,9,7);
+      nangluc3:Array[1..6] of Byte=(8,9,10,9,7,8);
+      needpoint:Array[0..7] of Longint=(50,100,200,500,800,1500,2000,5000);
+      maxw=100;
+      maxh=100;
+      maximg=71;
+      maxmap=80;
+
+Type HD=Array[1..maximg] of TFPCustomImage;
+     skill=Array[0..7] of Longint;
+     nen=Array[1..maxw,1..maxh] of Integer;
+     Effect=Record
+              val,time:Longint;
+            End;
+     Thuoctinh=Record
+              x,y,li,mal,lc,lt,ls,lg,d,ele,m,p,s,tt,nv,ha,bo:Longint;
+              skl,sklcd:skill;
+              Eff:Array[1..9] of Effect;
+            End;
+     hpeff=Record
+          x,y,val,cd,color:Longint;
+        End;
+     Thuoctinh2=Array[1..200] of Thuoctinh;
+     telepos=Array[1..maxmap] of Record
+                                x,y:Integer;
+                              End;
+     arrhpeff=Array[1..1000] of hpeff;
+
+Procedure Initg(Var console:IPTCConsole;Var surface:IPTCSurface);
+
+implementation
+
+Procedure Initg(Var console:IPTCConsole;Var surface:IPTCSurface);
+Var format:IPTCFormat;
+Begin
+  console:=TPTCConsoleFactory.CreateNew;
+  format:=TPTCFormatFactory.CreateNew(32,$FF0000,$FF00,$FF);
+  console.open('Boom',format);
+  surface:=TPTCSurfaceFactory.CreateNew(console.width,console.height,format);
+End;
+
+end.

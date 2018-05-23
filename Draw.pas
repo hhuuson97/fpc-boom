@@ -1,0 +1,214 @@
+unit Draw;
+
+interface
+
+uses Classes,ptc,sysutils,FPimage,FPImgCanv,FPReadPNG,Init;
+
+Var Reader:TFPReaderPNG;
+
+Procedure Draw1(k,m1,n1,m2,n2,x,y:Integer;per:Integer;a:HD;surface:IPTCSurface;Var pixels:PUint32);
+
+Procedure hcn(a,b,c,d:Integer;e:Byte;surface:IPTCSurface;Var pixels:PUint32);
+
+Procedure DrawNum(s:Longint;u,v,color:Integer;a:HD;surface:IPTCSurface;Var pixels:PUint32);
+
+Procedure DrawStr(s:String;u,v:Integer;a:HD;surface:IPTCSurface;Var pixels:PUint32);
+
+Procedure DrawStr10(s:AnsiString;u,v:Integer;a:HD;surface:IPTCSurface;Var pixels:PUint32);
+
+Procedure Draw2(i,j,x,y:Byte;time:Longint;per,tx,ty:Integer;a:HD;surface:IPTCSurface;Var pixels:PUint32);
+
+Procedure Background(vt:nen;mapw,maph,scrx,scry:Longint;a:HD;surface:IPTCSurface;Var pixels:PUint32);
+
+implementation
+
+//ham co ban nhat de ve doi tuong
+//k la so hieu cua file anh
+//cac flame anh duoc cat thanh m2xn2 anh nho
+//ve ra tam anh thu m1xn1
+//(x,y) la toa do tren trai
+Procedure Draw1(k,m1,n1,m2,n2,x,y:Integer;per:Integer;a:HD;surface:IPTCSurface;Var pixels:PUint32);
+Var i,j,u,v,wi,he:Integer;
+    t,r,g,b:Uint32;
+    c:TFPColor;
+Begin
+  wi:=surface.width;
+  he:=surface.height;
+  i:=x-per;
+  For u:=x to x+a[k].width div m2 div per-1 do
+    Begin
+      i:=i+per;
+      j:=y-per;
+      If (u<wi) and (u>=0) then
+        For v:=y to y+a[k].height div n2 div per-1 do
+          Begin
+            j:=j+per;
+            If (v<he) and (v>=0) then
+              Begin
+                c:=a[k].colors[i-x+(a[k].width*(m1-1)) div m2,j-y+(a[k].height*(n1-1)) div n2];
+                //alpha=0 la diem anh trong suot
+                If c.alpha>0 then
+                  Begin
+                    r:=c.red div 256;
+                    g:=c.green div 256;
+                    b:=c.blue div 256;
+                    t:=r shl 16+g shl 8+b;
+                    If (t>0) then pixels[u+v*wi]:=t;
+                  End;
+              End;
+          End;
+    End;
+End;
+
+//ve hinh chu nhat lam nen toa do (a,b)->(c,d)
+Procedure hcn(a,b,c,d:Integer;e:Byte;surface:IPTCSurface;Var pixels:PUint32);
+Var i,j,wi,he:Integer;
+Begin
+  wi:=surface.width;
+  he:=surface.height;
+  For i:=a to c do
+    For j:=b to d do
+      Begin
+        Case e of
+          1:pixels[i+j*wi]:=$009900;
+          2:pixels[i+j*wi]:=$009999;
+          3:pixels[i+j*wi]:=$000099;
+          4:pixels[i+j*wi]:=$FFFFFF;
+          5:If (((i+j) and 1)=0) then pixels[i+j*wi]:=$000000;
+        End;
+      End;
+End;
+
+//ve ra so s voi toa do tren phai (u,v)
+Procedure DrawNum(s:Longint;u,v,color:Integer;a:HD;surface:IPTCSurface;Var pixels:PUint32);
+Var s1:String;
+    i,t:Byte;
+Begin
+  Case color of
+    1:t:=41;
+    2:t:=69;
+    3:t:=70;
+  End;
+  Str(s,s1);
+  u:=u-Length(s1)*8-8;
+  If s<0 then
+    Begin
+      u:=u+8;
+      Draw1(t,1,11,1,11,u,v,1,a,surface,pixels);
+      s:=-s;
+    End;
+  Str(s,s1);
+  For i:=1 to Length(s1) do
+    Begin
+      u:=u+8;
+      Draw1(t,1,ord(s1[i])-47,1,11,u,v,1,a,surface,pixels);
+    End;
+End;
+
+//Ve chuoi ki tu s voi toa do tren trai(u,v)
+Procedure DrawStr(s:String;u,v:Integer;a:HD;surface:IPTCSurface;Var pixels:PUint32);
+Var i,p,q:Integer;
+    c:TFPColor;
+    dd:Boolean;
+Begin
+  For i:=1 to Length(s) do
+    If (s[i]>='A') and (s[i]<='Z') then
+      Begin
+        Draw1(68,1,ord(s[i])-64,1,26,u,v,1,a,surface,pixels);
+        u:=u+12;
+        For p:=10 downto 0 do
+          Begin
+            dd:=false;
+            For q:=(ord(s[i])-65)*10 to (ord(s[i])-64)*10-1 do
+              Begin
+                c:=a[68].colors[p,q];
+                If (c.red+c.green+c.blue>0) then
+                  Begin
+                    dd:=True;
+                    Break;
+                  End;
+              End;
+            If dd then Break;
+            u:=u-1;
+          End;
+      End
+    Else
+      If (s[i]>='0') and (s[i]<='9') then
+        Begin
+          Drawnum((ord(s[i])-48),u+8,v,2,a,surface,pixels);
+          u:=u+8;
+        End
+    Else u:=u+5;
+End;
+
+Procedure DrawStr10(s:AnsiString;u,v:Integer;a:HD;surface:IPTCSurface;Var pixels:PUint32);
+Var i,d,t:Integer;
+    tmp,c:String;
+Begin
+  d:=0;
+  s:=s+' ';
+  tmp:='';
+  t:=0;
+  c:='';
+  For i:=1 to length(s) do
+    Begin
+      If (s[i]<>' ') then
+        Begin
+          tmp:=tmp+s[i];
+          inc(t);
+        End
+      Else
+        Begin
+          If (t+d<=10) then
+            Begin
+              If d>0 then c:=c+' '+tmp
+              Else c:=tmp;
+              d:=d+t+1;
+            End
+          Else
+            Begin
+              Drawstr(c,u,v,a,surface,pixels);
+              c:=tmp;
+              v:=v+12;
+              d:=t+1;
+            End;
+          tmp:='';
+          t:=0;
+        End;
+    End;
+  If c<>' ' then Drawstr(c,u,v,a,surface,pixels);
+End;
+
+//Ve cac hinh anh trong game
+//hai chi so dau xac dinh doi tuong
+//hai chi so sau chi vi tri doi tuong
+//chi so time mo ta hanh dong doi tuong
+//chi so per chia nho ti le
+//hai chi so (tx,ty) la vi tri khung may anh
+Procedure Draw2(i,j,x,y:Byte;time:Longint;per,tx,ty:Integer;a:HD;surface:IPTCSurface;Var pixels:PUint32);
+Begin
+  Case i of
+    0:Draw1(37,(j-1) mod 5+1,(j-1) div 5+1,5,3,tx+(x-1)*20 div per,ty+(y-1)*20 div per,per,a,surface,pixels);
+    2:Draw1(38,(j-1) mod 5+1,(j-1) div 5+1,5,4,tx+(x-1)*20 div per,ty+(y-1)*20 div per,per,a,surface,pixels);
+    3:Draw1(39,(j-1) mod 5+1,(j-1) div 5+1,5,3,tx+(x-1)*20 div per,ty+(y-1)*20 div per,per,a,surface,pixels);
+    4:Draw1(40,(j-1) mod 5+1,(j-1) div 5+1,5,6,tx+(x-1)*20 div per,ty+((y-1)*20-5) div per,per,a,surface,pixels);
+    5:Draw1(58,(j-1) mod 4+1,1,4,1,tx+(x-1)*20 div per,ty+(y-1)*20 div per,per,a,surface,pixels);
+    1:Begin
+      Case j of
+        1,2,3:Draw1(41+j,(time div 10) mod 7+1,1,8,1,tx+(x-1)*20 div per,ty+(y-1)*20 div per,per,a,surface,pixels);
+        4,5,6:Draw1(42+j,(time div 10) mod 3+1,1,3,1,tx+(x-1)*20 div per,ty+(y-1)*20 div per,per,a,surface,pixels);
+      End;
+    End;
+  End;
+End;
+
+//Ve mat dat voi cua so man hinh tai (scrx,scry)
+Procedure Background(vt:nen;mapw,maph,scrx,scry:Longint;a:HD;surface:IPTCSurface;Var pixels:PUint32);
+Var i,j:Integer;
+Begin
+  For i:=1 to mapw do
+    For j:=1 to maph do
+      Draw2(0,vt[i,j],i,j,0,1,-scrx,-scry,a,surface,pixels);
+End;
+
+end.
